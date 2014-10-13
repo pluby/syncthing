@@ -177,6 +177,7 @@ var (
 	doUpgradeCheck    bool
 	noBrowser         bool
 	generateDir       string
+	logFile           string
 	noRestart         = os.Getenv("STNORESTART") != ""
 	guiAddress        = os.Getenv("STGUIADDRESS") // legacy
 	guiAuthentication = os.Getenv("STGUIAUTH")    // legacy
@@ -193,11 +194,18 @@ func main() {
 	if err != nil {
 		l.Fatalln("home:", err)
 	}
+
+	if runtime.GOOS == "windows" {
+		// On Windows, we use a log file by default.
+		logFile = filepath.Join(defConfDir, "syncthing.log")
+	}
+
 	flag.StringVar(&generateDir, "generate", "", "Generate key in specified dir, then exit")
 	flag.StringVar(&guiAddress, "gui-address", guiAddress, "Override GUI address")
 	flag.StringVar(&guiAuthentication, "gui-authentication", guiAuthentication, "Override GUI authentication; username:password")
 	flag.StringVar(&guiAPIKey, "gui-apikey", guiAPIKey, "Override GUI API key")
 	flag.StringVar(&confDir, "home", "", "Set configuration directory")
+	flag.StringVar(&logFile, "logfile", logFile, "Log file name (blank for stdout)")
 	flag.IntVar(&logFlags, "logflags", logFlags, "Select information in log line prefix")
 	flag.BoolVar(&noBrowser, "no-browser", false, "Do not start browser")
 	flag.BoolVar(&noRestart, "no-restart", noRestart, "Do not restart; just exit")
