@@ -94,6 +94,7 @@ func startGUI(cfg config.GUIConfiguration, assetDir string, m *model.Model) erro
 	getRestMux.HandleFunc("/rest/config", restGetConfig)
 	getRestMux.HandleFunc("/rest/config/sync", restGetConfigInSync)
 	getRestMux.HandleFunc("/rest/connections", withModel(m, restGetConnections))
+	getRestMux.HandleFunc("/rest/directoryAutocomplete", restGetDirectoryAutocomplete)
 	getRestMux.HandleFunc("/rest/discovery", restGetDiscovery)
 	getRestMux.HandleFunc("/rest/errors", restGetErrors)
 	getRestMux.HandleFunc("/rest/events", restGetEvents)
@@ -637,6 +638,39 @@ func restGetPeerCompletion(m *model.Model, w http.ResponseWriter, r *http.Reques
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	json.NewEncoder(w).Encode(comp)
+}
+
+func restGetDirectoryAutocomplete(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	qs := r.URL.Query()
+	soFar := qs.Get("soFar")
+	lastSeparator := strings.LastIndex(soFar, "/")
+	if lastSeparator >= 0 {
+		preSeparator := soFar[0:lastSeparator]
+		postSeparator := soFar[lastSeparator + 1:]
+		var searchString, _ = osutil.ExpandTilde(preSeparator)
+		if len(searchString) == 0 {
+			searchString = "/"
+		}
+		subdirectories, _ := ioutil.ReadDir(searchString)
+		var ret = make([]string, 10)
+		var i = 0;
+		for _, subdirectory := range subdirectories {
+			if subdirectory.IsDir() {
+				subdirectoryName := subdirectory.Name()
+				if strings.Index(subdirectoryName, postSeparator) == 0 {
+					ret[i] = preSeparator + "/" + subdirectoryName
+					i = i + 1
+				}
+			}
+			if i >= 10 {
+				break
+			}
+		}
+		json.NewEncoder(w).Encode(ret[0:i])
+	} else {
+		json.NewEncoder(w).Encode([0]string{})
+	}
 }
 
 func embeddedStatic(assetDir string) http.Handler {
